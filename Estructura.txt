@@ -1,0 +1,25 @@
+network_monitor_project/
+│
+├── core_monitor/               # Directorio exclusivo para los scripts de red
+│   ├── __init__.py
+│   ├── ping_worker.py          # Script independiente: Hace ping y calcula latencia/pérdidas
+│   ├── snmp_worker.py          # Script independiente: Consulta tráfico y hardware (opcional)
+│   └── speed_worker.py         # Script independiente: Ejecuta el test de velocidad bajo demanda
+│
+├── web_dashboard/              # Proyecto Web (ej. Django o Flask)
+│   ├── manage.py
+│   ├── web_dashboard/          # Configuración del framework web
+│   │   ├── __init__.py
+│   │   ├── settings.py
+│   │   └── urls.py
+│   │
+│   ├── monitor_app/            # Aplicación específica del panel
+│   │   ├── models.py           # Define las tablas de la BD (Nodos, Historial de Caídas)
+│   │   ├── views.py            # Lógica para enviar los datos a las pantallas
+│   │   └── templates/          # Pantallas en HTML + Bootstrap
+│   │       ├── base.html       # Estructura principal (Navbar, Sidebar)
+│   │       ├── dashboard.html  # Vista general con las tarjetas de los nodos (Verde/Rojo)
+│   │       └── node_detail.html# Gráficos de latencia e historial de un nodo específico
+│
+├── requirements.txt            # Librerías necesarias (django, requests, speedtest-cli, etc.)
+└── README.md                   # La pieza clave del portafolio (Explicación y topología)

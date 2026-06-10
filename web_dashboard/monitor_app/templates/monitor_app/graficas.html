@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetMonitor Pro - Gráficas de Conectividad</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-dark bg-dark shadow-sm mb-4">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">
+                <i class="fa-solid fa-tower-broadcast text-warning me-2"></i> NetMonitor Pro
+            </a>
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-sm">
+                <i class="fa-solid fa-arrow-left me-1"></i> Volver al Dashboard
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold text-dark mb-1">Métricas de Conectividad</h2>
+                <p class="text-muted mb-0">Historial de rendimiento físico de los nodos de la red</p>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-12 col-lg-6">
+                <div class="card shadow-sm border-0 rounded-3">
+                    <div class="card-header bg-white border-0 pt-3">
+                        <h5 class="card-title fw-bold text-secondary mb-0">
+                            <i class="fa-solid fa-chart-line text-primary me-2"></i> Latencia Histórica (RTT)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="chartLatencia" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <div class="card shadow-sm border-0 rounded-3">
+                    <div class="card-header bg-white border-0 pt-3">
+                        <h5 class="card-title fw-bold text-secondary mb-0">
+                            <i class="fa-solid fa-microchip text-info me-2"></i> Uso de CPU y Memoria RAM
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="chartHardware" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Recibimos los datos empaquetados desde el backend de Django
+        const listaEquipos = {{ lista_nodos|safe }};
+        const datosLatencia = {{ lista_latencias|safe }};
+        const datosCPU = {{ lista_cpu|safe }};
+        const datosRAM = {{ lista_ram|safe }};
+
+        // 1. Configuración Gráfico de Latencia
+        const ctxLatencia = document.getElementById('chartLatencia').getContext('2d');
+        new Chart(ctxLatencia, {
+            type: 'bar',
+            data: {
+                labels: listaEquipos,
+                datasets: [{
+                    label: 'Latencia Actual (ms)',
+                    data: datosLatencia,
+                    backgroundColor: 'rgba(13, 110, 253, 0.75)',
+                    borderColor: 'rgb(13, 110, 253)',
+                    borderWidth: 1.5,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+
+        // 2. Configuración Gráfico de Hardware (SNMP)
+        const ctxHardware = document.getElementById('chartHardware').getContext('2d');
+        new Chart(ctxHardware, {
+            type: 'line',
+            data: {
+                labels: listaEquipos,
+                datasets: [
+                    {
+                        label: 'Uso de CPU (%)',
+                        data: datosCPU,
+                        borderColor: 'rgb(220, 53, 69)',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Uso de RAM (%)',
+                        data: datosRAM,
+                        borderColor: 'rgb(13, 202, 240)',
+                        backgroundColor: 'rgba(13, 202, 240, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
+            },
+            options: { responsive: true }
+        });
+    </script>
+</body>
+</html>

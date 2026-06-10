@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetMonitor Pro - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">
+                <i class="fa-solid fa-tower-cell text-warning me-2"></i> NetMonitor Pro
+            </a>
+            <span class="navbar-text d-none d-md-inline text-muted">
+                Sistema de Monitoreo e Infraestructura
+            </span>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <!-- ENCABEZADO, BOTÓN DE REGISTRO Y BOTON DE GRAFICAS -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="fw-bold text-dark mb-1">Panel de Control de Nodos</h1>
+                <p class="text-muted mb-0">Orquestación de Workers en tiempo real</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'vista_graficas' %}" class="btn btn-purple bg-gradient text-white shadow-sm" style="background-color: #6f42c1;">
+                    <i class="fa-solid fa-chart-pie me-1"></i> Ver Gráficas de Red
+                </a>
+                <button class="btn btn-primary shadow-sm fw-bold px-4" data-bs-toggle="modal" data-bs-target="#modalNodo">
+                    <a href="/admin/monitor_app/nodo/add/" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Nuevo Nodo
+                    </a>
+                </button>
+            </div>
+        </div>
+        <!-- NUEVO BLOQUE PARA CONTROL DE INTERVALO -->
+        <div class="row mb-4">
+            <div class="col-12 col-md-4">
+                <div class="card shadow-sm border-0 rounded-3 p-3 bg-white">
+                    <form action="{% url 'actualizar_intervalo' %}" method="POST" class="d-flex align-items-center gap-2">
+                        {% csrf_token %} <div class="flex-grow-1">
+                            <label class="form-label small fw-bold text-muted mb-1">
+                                <i class="fa-solid fa-clock text-warning me-1"></i> Frecuencia de Escaneo (s)
+                            </label>
+                            <input type="number" name="intervalo" class="form-control form-control-sm" 
+                                   value="{{ intervalo_actual }}" min="1" required>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-dark align-self-end shadow-sm">
+                            <i class="fa-solid fa-rotate me-1"></i> Aplicar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- TABLA DE NODOS -->
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-center">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="text-start ps-4">Nombre del Equipo</th>
+                                <th>Dirección IP</th>
+                                <th>Tecnología</th>
+                                <th>Estado Conexión</th>
+                                <th>Latencia Actual</th>
+                                <th>Módulo SNMP</th> <th>Estatus del Escáner</th>
+                                <th class="pe-4">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for nodo in nodos %}
+                            <tr>
+                                <td class="text-start ps-4 fw-bold text-secondary">
+                                    <i class="fa-solid fa-server me-2 text-primary"></i> {{ nodo.nombre }}
+                                </td>
+                                
+                                <td>
+                                    <span class="badge bg-light text-dark border font-monospace px-2.5 py-1.5">{{ nodo.ip }}</span>
+                                </td>
+                                
+                                <td>
+                                    {% if nodo.tecnologia == "FO" %}
+                                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle"><i class="fa-solid fa-wave-square me-1"></i> {{ nodo.get_tecnologia_display }}</span>
+                                    {% elif nodo.tecnologia == "RE" %}
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"><i class="fa-solid fa-wifi me-1"></i> {{ nodo.get_tecnologia_display }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle"><i class="fa-solid fa-network-wired me-1"></i> {{ nodo.get_tecnologia_display }}</span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if nodo.ultimo_estado == "ONLINE" %}
+                                        <span class="badge bg-success text-white px-3 py-1.5 shadow-sm"><i class="fa-solid fa-circle-check me-1"></i> ONLINE</span>
+                                    {% elif nodo.ultimo_estado == "DEGRADADO" %}
+                                        <span class="badge bg-warning text-dark px-3 py-1.5 shadow-sm"><i class="fa-solid fa-triangle-exclamation me-1"></i> DEGRADADO</span>
+                                    {% elif nodo.ultimo_estado == "OFFLINE" %}
+                                        <span class="badge bg-danger text-white px-3 py-1.5 shadow-sm"><i class="fa-solid fa-circle-xmark me-1"></i> OFFLINE</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary text-white px-3 py-1.5"><i class="fa-solid fa-question me-1"></i> SIN LECTURAS</span>
+                                    {% endif %}
+                                </td>
+
+                                <td class="font-monospace fw-bold text-dark">
+                                    {{ nodo.ultima_latencia }}
+                                </td>
+
+                                <td>
+                                    {% if nodo.snmp_activo %}
+                                        <div class="text-start d-inline-block bg-white p-2 border rounded shadow-sm">
+                                            <span class="d-block small text-dark mb-1"><i class="fa-solid fa-microchip text-primary me-1"></i> CPU: <strong>{% if nodo.metricas.first.snmp_cpu %}{{ nodo.metricas.first.snmp_cpu }}%{% else %}--{% endif %}</strong></span>
+                                            <span class="d-block small text-dark"><i class="fa-solid fa-memory text-info me-1"></i> RAM: <strong>{% if nodo.metricas.first.snmp_ram %}{{ nodo.metricas.first.snmp_ram }}%{% else %}--{% endif %}</strong></span>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted small"><i class="fa-solid fa-circle-minus me-1"></i> Desactivado</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <td>
+                                    {% if nodo.monitoreo_activo %}
+                                        <span class="badge rounded-pill bg-success-subtle text-success border border-success px-3 py-1.5"><i class="fa-solid fa-play me-1"></i> ACTIVO</span>
+                                    {% else %}
+                                        <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger px-3 py-1.5"><i class="fa-solid fa-pause me-1"></i> PAUSADO</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <td class="pe-4">
+                                    <a href="{% url 'toggle_nodo' nodo.id %}" 
+                                       class="btn btn-sm shadow-sm px-3 {% if nodo.monitoreo_activo %}btn-outline-danger{% else %}btn-success{% endif %}">
+                                        {% if nodo.monitoreo_activo %}
+                                            <i class="fa-solid fa-stop me-1"></i> Detener
+                                        {% else %}
+                                            <i class="fa-solid fa-play me-1"></i> Iniciar
+                                        {% endif %}
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="fa-solid fa-triangle-exclamation fa-2x mb-3 text-warning"></i>
+                                    <p class="mb-0">No hay nodos registrados en el sistema todavía.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Recibimos las series de tiempo desde Django
+        const ejeTiempo = {{ lista_tiempos|safe }};
+        const datosLatencia = {{ lista_latencias|safe }};
+        const datosCPU = {{ lista_cpu|safe }};
+        const datosRAM = {{ lista_ram|safe }};
+
+        // 1. Gráfico de Latencia Histórica (Evolución Temporal)
+        const ctxLatencia = document.getElementById('chartLatencia').getContext('2d');
+        new Chart(ctxLatencia, {
+            type: 'line', // Cambiado a línea para ver la estabilidad o picos de lag
+            data: {
+                labels: ejeTiempo,
+                datasets: [{
+                    label: 'Latencia (ms)',
+                    data: datosLatencia,
+                    borderColor: 'rgb(13, 110, 253)',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    tension: 0.2,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true }
+                },
+                scales: {
+                    x: { display: true, title: { display: true, text: 'Historial Cronológico' } },
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // 2. Gráfico de Hardware SNMP (Evolución Temporal)
+        const ctxHardware = document.getElementById('chartHardware').getContext('2d');
+        new Chart(ctxHardware, {
+            type: 'line',
+            data: {
+                labels: ejeTiempo,
+                datasets: [
+                    {
+                        label: 'Uso de CPU (%)',
+                        data: datosCPU,
+                        borderColor: 'rgb(220, 53, 69)',
+                        backgroundColor: 'rgba(220, 53, 69, 0.05)',
+                        tension: 0.2,
+                        fill: false
+                    },
+                    {
+                        label: 'Uso de RAM (%)',
+                        data: datosRAM,
+                        borderColor: 'rgb(13, 202, 240)',
+                        backgroundColor: 'rgba(13, 202, 240, 0.05)',
+                        tension: 0.2,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { display: true, title: { display: true, text: 'Historial Cronológico' } }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
