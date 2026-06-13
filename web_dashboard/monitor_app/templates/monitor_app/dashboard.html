@@ -10,40 +10,66 @@
 <body class="bg-light">
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="#">
-                <i class="fa-solid fa-tower-cell text-warning me-2"></i> NetMonitor Pro
-            </a>
-            <span class="navbar-text d-none d-md-inline text-muted">
-                Sistema de Monitoreo e Infraestructura
-            </span>
-        </div>
-    </nav>
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="#">
+            <i class="fa-solid fa-tower-cell text-warning me-2"></i> NetMonitor Pro
+        </a>
+        <span class="navbar-text d-none d-md-inline text-muted">
+            Sistema de Monitoreo e Infraestructura
+        </span>
+    </div>
+    </nav> <div class="container my-5">
 
-    <div class="container my-5">
-        <!-- ENCABEZADO, BOTÓN DE REGISTRO Y BOTON DE GRAFICAS -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+            <div>
+                <h1 class="fw-bold text-dark m-0">Panel de Control de Nodos</h1>
+                <p class="text-muted m-0">Orquestación de Workers en tiempo real</p>
+            </div>
+            </div>
+
+        {% if messages %}
+            <div class="row my-3">
+                <div class="col-12">
+                    {% for message in messages %}
+                        <div class="alert alert-info alert-dismissible fade show shadow-sm d-flex align-items-center justify-content-between" role="alert">
+                            <div>
+                                <i class="fa-solid fa-circle-info me-2 text-info"></i> 
+                                {{ message }}
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="table-responsive shadow rounded">
+            <table class="table align-middle m-0">
+
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
             <div>
                 <h1 class="fw-bold text-dark mb-1">Panel de Control de Nodos</h1>
                 <p class="text-muted mb-0">Orquestación de Workers en tiempo real</p>
             </div>
             <div class="d-flex gap-2">
-                <a href="{% url 'vista_graficas' %}" class="btn btn-purple bg-gradient text-white shadow-sm" style="background-color: #6f42c1;">
-                    <i class="fa-solid fa-chart-pie me-1"></i> Ver Gráficas de Red
+                <a href="{% url 'barrido_red_local' %}" class="btn btn-dark shadow-sm fw-bold align-self-center">
+                    <i class="fa-solid fa-radar me-1 text-info"></i> Escanear Red Completa
                 </a>
-                <button class="btn btn-primary shadow-sm fw-bold px-4" data-bs-toggle="modal" data-bs-target="#modalNodo">
-                    <a href="/admin/monitor_app/nodo/add/" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Nuevo Nodo
-                    </a>
-                </button>
+                <a href="{% url 'vista_graficas' %}" class="btn text-white shadow-sm fw-bold align-self-center" style="background-color: #6f42c1;">
+                    <i class="fa-solid fa-chart-line me-1"></i> Ver Gráficas de Red
+                </a>
+                <a href="/admin/monitor_app/nodo/add/" target="_blank" class="btn btn-primary shadow-sm fw-bold px-4 align-self-center">
+                    <i class="fa-solid fa-plus-circle me-1"></i> Nuevo Nodo
+                </a>
             </div>
         </div>
-        <!-- NUEVO BLOQUE PARA CONTROL DE INTERVALO -->
+
         <div class="row mb-4">
             <div class="col-12 col-md-4">
                 <div class="card shadow-sm border-0 rounded-3 p-3 bg-white">
                     <form action="{% url 'actualizar_intervalo' %}" method="POST" class="d-flex align-items-center gap-2">
-                        {% csrf_token %} <div class="flex-grow-1">
+                        {% csrf_token %} 
+                        <div class="flex-grow-1">
                             <label class="form-label small fw-bold text-muted mb-1">
                                 <i class="fa-solid fa-clock text-warning me-1"></i> Frecuencia de Escaneo (s)
                             </label>
@@ -57,11 +83,8 @@
                 </div>
             </div>
         </div>
-        <!-- TABLA DE NODOS -->
+
         <div class="card shadow-sm border-0 rounded-3">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <div class="card shadow-sm border-0 rounded-3">
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 text-center">
@@ -72,7 +95,8 @@
                                 <th>Tecnología</th>
                                 <th>Estado Conexión</th>
                                 <th>Latencia Actual</th>
-                                <th>Módulo SNMP</th> <th>Estatus del Escáner</th>
+                                <th>Módulo SNMP</th> 
+                                <th>Estatus del Escáner</th>
                                 <th class="pe-4">Acción</th>
                             </tr>
                         </thead>
@@ -84,7 +108,7 @@
                                 </td>
                                 
                                 <td>
-                                    <span class="badge bg-light text-dark border font-monospace px-2.5 py-1.5">{{ nodo.ip }}</span>
+                                    <span class="badge bg-white text-dark border font-monospace px-2 py-1">{{ nodo.ip }}</span>
                                 </td>
                                 
                                 <td>
@@ -97,19 +121,21 @@
                                     {% endif %}
                                 </td>
 
-                                <td>
+                                <td id="estado-{{ nodo.id }}">
                                     {% if nodo.ultimo_estado == "ONLINE" %}
                                         <span class="badge bg-success text-white px-3 py-1.5 shadow-sm"><i class="fa-solid fa-circle-check me-1"></i> ONLINE</span>
                                     {% elif nodo.ultimo_estado == "DEGRADADO" %}
                                         <span class="badge bg-warning text-dark px-3 py-1.5 shadow-sm"><i class="fa-solid fa-triangle-exclamation me-1"></i> DEGRADADO</span>
                                     {% elif nodo.ultimo_estado == "OFFLINE" %}
                                         <span class="badge bg-danger text-white px-3 py-1.5 shadow-sm"><i class="fa-solid fa-circle-xmark me-1"></i> OFFLINE</span>
+                                    {% elif nodo.ultimo_estado == "DESACTIVADO" %}
+                                        <span class="badge bg-dark text-muted px-3 py-1.5 shadow-sm"><i class="fa-solid fa-power-off me-1"></i> APAGADO</span>
                                     {% else %}
                                         <span class="badge bg-secondary text-white px-3 py-1.5"><i class="fa-solid fa-question me-1"></i> SIN LECTURAS</span>
                                     {% endif %}
                                 </td>
 
-                                <td class="font-monospace fw-bold text-dark">
+                                <td id="latencia-{{ nodo.id }}" class="font-monospace fw-bold text-dark">
                                     {{ nodo.ultima_latencia }}
                                 </td>
 
@@ -158,72 +184,44 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
-        // Recibimos las series de tiempo desde Django
-        const ejeTiempo = {{ lista_tiempos|safe }};
-        const datosLatencia = {{ lista_latencias|safe }};
-        const datosCPU = {{ lista_cpu|safe }};
-        const datosRAM = {{ lista_ram|safe }};
+        function actualizarDashboardEnVivo() {
+            fetch("{% url 'api_estatus_nodos' %}")
+                .then(response => response.json())
+                .then(data => {
+                    data.nodos.forEach(nodo => {
+                        // 1. Actualizar la celda de la Latencia
+                        const celdaLatencia = document.getElementById(`latencia-${nodo.id}`);
+                        if (celdaLatencia) {
+                            celdaLatencia.innerText = nodo.latencia;
+                        }
 
-        // 1. Gráfico de Latencia Histórica (Evolución Temporal)
-        const ctxLatencia = document.getElementById('chartLatencia').getContext('2d');
-        new Chart(ctxLatencia, {
-            type: 'line', // Cambiado a línea para ver la estabilidad o picos de lag
-            data: {
-                labels: ejeTiempo,
-                datasets: [{
-                    label: 'Latencia (ms)',
-                    data: datosLatencia,
-                    borderColor: 'rgb(13, 110, 253)',
-                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                    tension: 0.2,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: true }
-                },
-                scales: {
-                    x: { display: true, title: { display: true, text: 'Historial Cronológico' } },
-                    y: { beginAtZero: true }
-                }
-            }
-        });
+                        // 2. Actualizar el Badge del Estado dinámicamente
+                        const celdaEstado = document.getElementById(`estado-${nodo.id}`);
+                        if (celdaEstado) {
+                            let badgeHTML = '';
+                            if (nodo.estado === 'ONLINE') {
+                                badgeHTML = `<span class="badge bg-success text-white px-3 py-1.5 shadow-sm"><i class="fa-solid fa-circle-check me-1"></i> ONLINE</span>`;
+                            } else if (nodo.estado === 'DEGRADADO') {
+                                badgeHTML = `<span class="badge bg-warning text-dark px-3 py-1.5 shadow-sm"><i class="fa-solid fa-triangle-exclamation me-1"></i> DEGRADADO</span>`;
+                            } else if (nodo.estado === 'OFFLINE') {
+                                badgeHTML = `<span class="badge bg-danger text-white px-3 py-1.5 shadow-sm"><i class="fa-solid fa-circle-xmark me-1"></i> OFFLINE</span>`;
+                            } else if (nodo.estado === 'DESACTIVADO') {
+                                badgeHTML = `<span class="badge bg-dark text-muted px-3 py-1.5 shadow-sm"><i class="fa-solid fa-power-off me-1"></i> APAGADO</span>`;
+                            } else {
+                                badgeHTML = `<span class="badge bg-secondary text-white px-3 py-1.5"><i class="fa-solid fa-question me-1"></i> SIN LECTURAS</span>`;
+                            }
+                            celdaEstado.innerHTML = badgeHTML;
+                        }
+                    });
+                })
+                .catch(error => console.error("Error en el refresco en vivo:", error));
+        }
 
-        // 2. Gráfico de Hardware SNMP (Evolución Temporal)
-        const ctxHardware = document.getElementById('chartHardware').getContext('2d');
-        new Chart(ctxHardware, {
-            type: 'line',
-            data: {
-                labels: ejeTiempo,
-                datasets: [
-                    {
-                        label: 'Uso de CPU (%)',
-                        data: datosCPU,
-                        borderColor: 'rgb(220, 53, 69)',
-                        backgroundColor: 'rgba(220, 53, 69, 0.05)',
-                        tension: 0.2,
-                        fill: false
-                    },
-                    {
-                        label: 'Uso de RAM (%)',
-                        data: datosRAM,
-                        borderColor: 'rgb(13, 202, 240)',
-                        backgroundColor: 'rgba(13, 202, 240, 0.05)',
-                        tension: 0.2,
-                        fill: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: { display: true, title: { display: true, text: 'Historial Cronológico' } }
-                }
-            }
-        });
+        // Ejecutar el refresco automático cada 5 segundos de forma silenciosa
+        setInterval(actualizarDashboardEnVivo, 5000);
     </script>
 </body>
 </html>

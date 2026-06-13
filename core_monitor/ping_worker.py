@@ -16,7 +16,6 @@ django.setup()
 
 from monitor_app.models import Nodo, HistorialMetricas
 
-
 # --- MOTOR DE RED OPTIMIZADO Y BILINGÜE ---
 def evaluar_nodo(ip, num_pings=4):
     sistema = platform.system().lower()
