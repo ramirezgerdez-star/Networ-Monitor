@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from monitor_app.views import dashboard, toggle_nodo, actualizar_intervalo, vista_graficas,api_estatus_nodos, barrido_red_local
+from monitor_app.views import dashboard, toggle_nodo, actualizar_intervalo, vista_graficas,api_estatus_nodos, barrido_red_local, actualizar_nombre_nodo, api_metricas_nodo, vista_graficas
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,4 +26,8 @@ urlpatterns = [
     path('actualizar-intervalo/', actualizar_intervalo, name='actualizar_intervalo'), # NUEVA URL para actualizar el intervalo desde el formulario
     path('api/estatus/', api_estatus_nodos, name='api_estatus_nodos'),
     path('barrido/', barrido_red_local, name='barrido_red_local'),
+    path('nodo/actualizar-nombre/<int:nodo_id>/', actualizar_nombre_nodo, name='actualizar_nombre_nodo'),
+    path('graficas/', vista_graficas, name='vista_graficas_base'),
+    path('graficas/<int:nodo_id>/', vista_graficas, name='vista_graficas'),
+    path('api/metricas/<int:nodo_id>/', api_metricas_nodo, name='api_metricas_nodo'),
 ]

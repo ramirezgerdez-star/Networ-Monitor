@@ -5,6 +5,7 @@ import socket
 import random
 import django
 
+
 # --- CONFIGURACIÓN DE ENTORNO DJANGO ---
 ruta_actual = os.path.dirname(os.path.abspath(__file__))
 ruta_proyecto = os.path.join(ruta_actual, "..", "web_dashboard")

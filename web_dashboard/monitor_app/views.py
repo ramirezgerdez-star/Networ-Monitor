@@ -4,6 +4,7 @@ import threading
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from .models import Nodo, ConfiguracionGlobal
+import datetime
 
 def barrido_red_local(request):
     # Detectar el sistema operativo para el comando de ping
@@ -12,18 +13,24 @@ def barrido_red_local(request):
     # Lista compartida para guardar las IPs que respondan
     ips_encontradas = []
     
-    # Función que ejecutará cada hilo para una IP específica
+    # REEMPLAZA ÚNICAMENTE ESTA FUNCIÓN INTERNA DENTRO DE BARRIDO_RED_LOCAL:
     def escanear_ip(ip_destino):
-        comando = ["ping", "-n", "2", "-w", "1500", ip_destino] if sistema == "windows" else ["ping", "-c", "2", "-W", "2s", ip_destino]
+        comando = ["ping", "-n", "2", "-w", "1500", ip_destino] if sistema == "windows" else ["ping", "-c", "2", "-W", "2", ip_destino]
         try:
             resultado = subprocess.run(comando, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             salida = resultado.stdout.lower()
             
-            # Filtros estrictos para confirmar que el host REALMENTE respondió
             if resultado.returncode == 0 and salida:
-                errores = ["inaccesible", "unreachable", "agotado", "timed out", "perdidos = 1", "loss = 100%"]
-                if not any(err in salida for err in errores):
-                    ips_encontradas.sappend(ip_destino)
+                if sistema == "windows":
+                    # Un host real en Windows responde con "tiempo=" o "time="
+                    # Y nos aseguramos de que NO diga "inaccesible" ni "unreachable"
+                    if ("tiempo=" in salida or "time=" in salida) and not any(x in salida for x in ["inaccesible", "unreachable", "perdidos = 2", "loss = 100%"]):
+                        ips_encontradas.append(ip_destino)
+                else:
+                    # Filtro para Linux / Mac
+                    errores = ["inaccesible", "unreachable", "agotado", "timed out"]
+                    if not any(err in salida for err in errores):
+                        ips_encontradas.append(ip_destino)
         except Exception:
             pass
 
@@ -151,3 +158,92 @@ def api_estatus_nodos(request):
             "monitoreo_activo": nodo.monitoreo_activo
         })
     return JsonResponse({"nodos": datos})
+
+from django.views.decorators.csrf import csrf_exempt
+import json
+
+@csrf_exempt # Para poder procesar la petición AJAX de forma sencilla
+def actualizar_nombre_nodo(request, nodo_id):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            nuevo_nombre = data.get("nombre", "").strip()
+            
+            if nuevo_nombre:
+                nodo = Nodo.objects.get(id=nodo_id)
+                nodo.nombre = nuevo_nombre
+                nodo.save()
+                return JsonResponse({"status": "success", "nombre": nodo.nombre})
+                
+            return JsonResponse({"status": "error", "message": "El nombre no puede estar vacío."}, status=400)
+        except Nodo.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Nodo no encontrado."}, status=404)
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)}, status=500)
+            
+    return JsonResponse({"status": "error", "message": "Método no permitido."}, status=405)
+
+import random  # Simulación temporal para CPU/RAM/Ancho de Banda si el nodo no tiene SNMP activo todavía
+
+# 1. Vista que renderiza la página web pasando el objeto del nodo seleccionado
+def vista_graficas(request, nodo_id=None):
+    # Si entran sin ID (ej. /graficas/), buscamos el primer equipo disponible
+    if nodo_id is None:
+        primer_nodo = Nodo.objects.first()
+        if primer_nodo:
+            return redirect('vista_graficas', nodo_id=primer_nodo.id)
+        return redirect('dashboard') # Si la base de datos está vacía, va al dashboard
+        
+    try:
+        nodo = Nodo.objects.get(id=nodo_id)
+        return render(request, "monitor_app/graficas.html", {"nodo": nodo})
+    except Nodo.DoesNotExist:
+        return redirect('dashboard')
+
+# 2. Endpoint API JSON corregido (revisa si tu modelo usa 'estado_conexion' o 'estado')
+def api_metricas_nodo(request, nodo_id):
+    try:
+        nodo = Nodo.objects.get(id=nodo_id)
+        
+        # 1. Buscamos la última métrica registrada en el historial de este nodo
+        ultima_metrica = HistorialMetricas.objects.filter(nodo=nodo).first()
+        
+        # 2. Evaluamos si el nodo está ONLINE basándonos en su última métrica real
+        esta_online = False
+        if ultima_metrica:
+            esta_online = (ultima_metrica.estado == "ONLINE")
+            
+        # 3. Determinamos si soporta telemetría avanzada usando tu campo 'snmp_activo'
+        soporta_snmp = nodo.snmp_activo and esta_online
+        
+        # 4. Asignamos los valores reales extrayéndolos de tus campos del modelo
+        latencia_actual = ultima_metrica.latencia if (ultima_metrica and esta_online) else 0
+        cpu_actual = 0
+        ram_actual = 0
+        b_bajada = 0.0
+        b_subida = 0.0  # <-- Inicializamos la variable de subida
+
+        if soporta_snmp and ultima_metrica:
+            # Extraemos los datos usando los nombres exactos de tus campos con fallback a 0 si son None
+            cpu_actual = ultima_metrica.snmp_cpu or 0
+            ram_actual = ultima_metrica.snmp_ram or 0
+            b_bajada = ultima_metrica.velocidad_max_download or 0.0
+            # Extraemos de forma segura el campo de subida de tu BD
+            b_subida = getattr(ultima_metrica, 'velocidad_max_subida', 0.0) or 0.0
+
+        # 5. Formateamos el JSON limpio para el script del osciloscopio
+        data = {
+            "timestamp": datetime.datetime.now().strftime("%H:%M:%S"),
+            "latencia": latencia_actual,
+            "soporta_snmp": soporta_snmp,
+            "cpu": cpu_actual,
+            "ram": ram_actual,
+            "ancho_banda_bajada": b_bajada,
+            "ancho_banda_subida": b_subida,  # <-- Enviado con éxito al frontend
+        }
+        return JsonResponse(data)
+
+    except Nodo.DoesNotExist:
+        return JsonResponse({"error": "Nodo no encontrado"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

@@ -47,17 +47,31 @@ def ciclo_monitoreo_segundo_plano():
     print("🚀 [DAEMON INTERNO] Iniciando hilos de escaneo nativos...")
     while True:
         # IMPORTANTE: Solo escaneamos nodos donde monitoreo_activo sea True
-        nodos_activos = Nodo.objects.filter(monitoreo_activo=True) # Revisa si en tu modelo es monitoreo_activo o monitoreo_activa
-
-        for nodo in nodos_activos:
-            reporte = evaluar_nodo(nodo.ip)
+        for nodo in Nodo.objects.filter(monitoreo_activo=True):
+    
+            # 1. Llamas a tu función de ping actual
+            resultado_ping = evaluar_nodo(nodo.ip, num_pings=1)
             
-            # Guardamos la métrica directamente en la Base de Datos
+            # 2. Inicializas las velocidades de red por defecto
+            mbps_down = 0.0
+            mbps_up = 0.0
+            
+            # 3. Si el nodo está ONLINE y tiene el switch SNMP activo, llamamos a tu simulador
+            if resultado_ping["estado"] == "ONLINE" and nodo.snmp_activo:
+                mbps_down, mbps_up = simular_ancho_banda()  # Tu función que genera los Mbps
+                
+            # 4. Creamos el registro en la base de datos mapeando todos tus campos reales
             HistorialMetricas.objects.create(
                 nodo=nodo,
-                estado=reporte['estado'],
-                latencia=reporte['latencia'],
-                perdida=reporte['perdida']
+                estado=resultado_ping["estado"],
+                latencia=resultado_ping["latencia"],
+                perdida=resultado_ping["perdida"],
+                # Simulamos CPU y RAM si el switch SNMP está activo, sino van en None
+                snmp_cpu=random.randint(15, 60) if nodo.snmp_activo else None,
+                snmp_ram=random.randint(30, 75) if nodo.snmp_activo else None,
+                # Guardamos las velocidades simuladas
+                velocidad_max_download=mbps_down,
+                velocidad_max_subida=mbps_up  # Recuerda haber agregado esta columna a tu modelo
             )
 
         # Consultamos el intervalo dinámico configurado por el usuario
@@ -68,3 +82,11 @@ def iniciar_orquestador():
     """Lanza el hilo para que Django lo corra de fondo de forma asíncrona"""
     hilo = threading.Thread(target=ciclo_monitoreo_segundo_plano, daemon=True)
     hilo.start()
+
+import random
+
+def simular_ancho_banda():
+    """Genera fluctuaciones realistas de carga y descarga en Mbps"""
+    bajada = round(random.uniform(30.0, 85.0), 2)  # Fluctuaciones entre 30 y 85 Mbps
+    subida = round(bajada * random.uniform(0.2, 0.4), 2) # Velocidad de subida asimétrica
+    return bajada, subida

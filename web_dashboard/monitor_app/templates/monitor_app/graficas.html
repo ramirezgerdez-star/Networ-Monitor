@@ -1,118 +1,318 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NetMonitor Pro - Gráficas de Conectividad</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body class="bg-light">
+{% extends 'monitor_app/base.html' %} {% block content %}
+<div class="container-fluid bg-dark text-white min-vh-100 py-4">
 
-    <nav class="navbar navbar-dark bg-dark shadow-sm mb-4">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">
-                <i class="fa-solid fa-tower-broadcast text-warning me-2"></i> NetMonitor Pro
-            </a>
-            <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-sm">
-                <i class="fa-solid fa-arrow-left me-1"></i> Volver al Dashboard
-            </a>
+    <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-3 mb-4">
+        <div>
+            <h1 class="fw-bold text-warning mb-1">
+                <i class="fa-solid fa-wave-square me-2"></i>Osciloscopio: {{ nodo.nombre }}
+            </h1>
+            <p class="text-muted small mb-0 font-monospace">Dirección IP: {{ nodo.ip }} | Ventana temporal: 30s
+                continuos</p>
         </div>
-    </nav>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-sm fw-bold shadow-sm">
+            <i class="fa-solid fa-arrow-left me-1"></i> Volver al Dashboard
+        </a>
+    </div>
 
-    <div class="container mb-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="fw-bold text-dark mb-1">Métricas de Conectividad</h2>
-                <p class="text-muted mb-0">Historial de rendimiento físico de los nodos de la red</p>
+    <div class="row g-3 mb-4 text-center">
+        <div class="col-6 col-md-3">
+            <div class="card bg-secondary-subtle border-0 p-3 rounded-3 shadow-sm">
+                <span class="text-muted small fw-bold d-block mb-1">LATENCIA PROMEDIO</span>
+                <h3 id="kpi-latencia" class="fw-bold text-info mb-0">0.0 ms</h3>
             </div>
         </div>
-
-        <div class="row g-4">
-            <div class="col-12 col-lg-6">
-                <div class="card shadow-sm border-0 rounded-3">
-                    <div class="card-header bg-white border-0 pt-3">
-                        <h5 class="card-title fw-bold text-secondary mb-0">
-                            <i class="fa-solid fa-chart-line text-primary me-2"></i> Latencia Histórica (RTT)
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="chartLatencia" style="max-height: 300px;"></canvas>
-                    </div>
-                </div>
+        <div class="col-6 col-md-3">
+            <div class="card bg-secondary-subtle border-0 p-3 rounded-3 shadow-sm">
+                <span class="text-muted small fw-bold d-block mb-1">CPU PROMEDIO</span>
+                <h3 id="kpi-cpu" class="fw-bold text-success mb-0">0%</h3>
             </div>
-
-            <div class="col-12 col-lg-6">
-                <div class="card shadow-sm border-0 rounded-3">
-                    <div class="card-header bg-white border-0 pt-3">
-                        <h5 class="card-title fw-bold text-secondary mb-0">
-                            <i class="fa-solid fa-microchip text-info me-2"></i> Uso de CPU y Memoria RAM
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="chartHardware" style="max-height: 300px;"></canvas>
-                    </div>
-                </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card bg-secondary-subtle border-0 p-3 rounded-3 shadow-sm">
+                <span class="text-muted small fw-bold d-block mb-1">RAM PROMEDIO</span>
+                <h3 id="kpi-ram" class="fw-bold text-purple mb-0" style="color: #af40ff;">0%</h3>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card bg-secondary-subtle border-0 p-3 rounded-3 shadow-sm">
+                <span class="text-muted small fw-bold d-block mb-1">BANDA PROMEDIO</span>
+                <h3 id="kpi-banda" class="fw-bold text-warning mb-0">0.0 Mbps</h3>
             </div>
         </div>
     </div>
 
-    <script>
-        // Recibimos los datos empaquetados desde el backend de Django
-        const listaEquipos = {{ lista_nodos|safe }};
-        const datosLatencia = {{ lista_latencias|safe }};
-        const datosCPU = {{ lista_cpu|safe }};
-        const datosRAM = {{ lista_ram|safe }};
+    <div class="row g-4">
 
-        // 1. Configuración Gráfico de Latencia
-        const ctxLatencia = document.getElementById('chartLatencia').getContext('2d');
-        new Chart(ctxLatencia, {
-            type: 'bar',
+        <div class="col-12 col-xl-6">
+            <div class="card bg-black border-secondary p-3 rounded-3 shadow-sm">
+                <h5 class="fw-bold text-info mb-3"><i class="fa-solid fa-clock-rotate-left me-2"></i>Historial de
+                    Latencia (Ping)</h5>
+                <div style="position: relative; height: 220px;">
+                    <canvas id="chartLatencia"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-6">
+            <div class="card bg-black border-secondary p-3 rounded-3 shadow-sm">
+                <h5 class="fw-bold text-success mb-3"><i class="fa-solid fa-microchip me-2"></i>Telemetría de Hardware
+                    (SNMP)</h5>
+                <div style="position: relative; height: 220px;">
+                    <canvas id="chartRecursos"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card bg-black border-secondary p-3 rounded-3 shadow-sm">
+                <h5 class="fw-bold text-warning mb-3"><i class="fa-solid fa-cloud-arrow-down me-2"></i>Tasas de
+                    Transferencia de Datos</h5>
+                <div style="position: relative; height: 240px;">
+                    <canvas id="chartAnchoBanda"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Variables globales para las instancias de las gráficas
+    let chartLatencia, chartRecursos, chartAnchoBanda;
+    const maxDataPoints = 15; // Límite de puntos en pantalla (30s aprox)
+    // Configuración común para estilo oscuro del osciloscopio
+    const gridConfig = {
+        color: 'rgba(255, 255, 255, 0.07)'
+    };
+    const ticksConfig = {
+        color: '#aaa',
+        font: {
+            family: 'monospace'
+        }
+    };
+    // 1. Inicializador de Gráfica de Latencia
+    function initChartLatencia() {
+        const ctx = document.getElementById('chartLatencia').getContext('2d');
+        chartLatencia = new Chart(ctx, {
+            type: 'line',
             data: {
-                labels: listaEquipos,
+                labels: [],
                 datasets: [{
-                    label: 'Latencia Actual (ms)',
-                    data: datosLatencia,
-                    backgroundColor: 'rgba(13, 110, 253, 0.75)',
-                    borderColor: 'rgb(13, 110, 253)',
-                    borderWidth: 1.5,
-                    borderRadius: 6
+                    label: 'Latencia (ms)',
+                    data: [],
+                    borderColor: '#0dcaf0',
+                    backgroundColor: 'rgba(13, 202, 240, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 4, // <-- MUESTRA LOS PUNTOS
+                    pointBackgroundColor: '#0dcaf0'
                 }]
             },
             options: {
                 responsive: true,
-                scales: { y: { beginAtZero: true } }
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#fff'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: gridConfig,
+                        ticks: ticksConfig
+                    },
+                    y: {
+                        min: 0, // <-- FUERZA EL VALOR MÍNIMO EN 0
+                        grid: gridConfig,
+                        ticks: ticksConfig,
+                        grid: gridConfig,
+                        ticks: ticksConfig,
+                        title: {
+                            display: true,
+                            text: 'ms',
+                            color: '#0dcaf0'
+                        }
+                    }
+                }
             }
         });
-
-        // 2. Configuración Gráfico de Hardware (SNMP)
-        const ctxHardware = document.getElementById('chartHardware').getContext('2d');
-        new Chart(ctxHardware, {
+    }
+    // 2. Inicializador de Gráfica de CPU y RAM
+    function initChartRecursos() {
+        const ctx = document.getElementById('chartRecursos').getContext('2d');
+        chartRecursos = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: listaEquipos,
-                datasets: [
-                    {
+                labels: [],
+                datasets: [{
                         label: 'Uso de CPU (%)',
-                        data: datosCPU,
-                        borderColor: 'rgb(220, 53, 69)',
-                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        data: [],
+                        borderColor: '#198754',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        tension: 0.2
+                    },
+                    {
+                        label: 'Uso de RAM (%)',
+                        data: [],
+                        borderColor: '#af40ff',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        tension: 0.2
+                    }
+                ]
+            },
+            options: {
+                animation: {
+                    duration: 0 // Desactiva la animación de rebote para que sea un barrido directo
+                },
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#fff'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: gridConfig,
+                        ticks: ticksConfig
+                    },
+                    y: {
+                        min: 0, // <-- FUERZA EL VALOR MÍNIMO EN 0
+                        max: 100,
+                        grid: gridConfig,
+                        ticks: ticksConfig,
+                        grid: gridConfig,
+                        ticks: ticksConfig,
+                        min: 0,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: '% Consumo',
+                            color: '#fff'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    // 3. Inicializador de Gráfica de Ancho de Banda (Subida/Bajada)
+    function initChartAnchoBanda() {
+        const ctx = document.getElementById('chartAnchoBanda').getContext('2d');
+        chartAnchoBanda = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                        label: 'Descarga / Downstream (Mbps)',
+                        data: [],
+                        borderColor: '#ffc107',
+                        backgroundColor: 'rgba(255, 193, 7, 0.05)',
+                        borderWidth: 2.5,
                         tension: 0.3,
                         fill: true
                     },
                     {
-                        label: 'Uso de RAM (%)',
-                        data: datosRAM,
-                        borderColor: 'rgb(13, 202, 240)',
-                        backgroundColor: 'rgba(13, 202, 240, 0.1)',
+                        label: 'Subida / Upstream (Mbps)',
+                        data: [],
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.05)',
+                        borderWidth: 2.5,
                         tension: 0.3,
                         fill: true
                     }
                 ]
             },
-            options: { responsive: true }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#fff'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: gridConfig,
+                        ticks: ticksConfig
+                    },
+                    y: {
+                        min: 0, // <-- FUERZA EL VALOR MÍNIMO EN 0
+                        grid: gridConfig,
+                        ticks: ticksConfig,
+                        title: {
+                            display: true,
+                            text: 'Velocidad (Mbps)',
+                            color: '#ffc107'
+                        }
+                    }
+                }
+            }
         });
-    </script>
-</body>
-</html>
+    }
+    // Función encargada de actualizar de forma dinámica los tres componentes
+    function actualizarMétricasOsciloscopio() {
+        fetch(`/api/metricas/{{ nodo.id }}/`)
+            .then(response => response.json())
+            .then(data => {
+                const horaActual = new Date().toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                // Limpiamos los datos: quitamos cualquier texto extra y convertimos a número
+                // Usamos parseFloat para asegurarnos de que "80.85 Mbps" se vuelva 80.85
+                const latencia = parseFloat(data.latencia || 0);
+                const cpu = parseFloat(data.cpu || 0);
+                const ram = parseFloat(data.ram || 0);
+                const download = parseFloat(data.ancho_banda_bajada || 0);
+                const upload = parseFloat(data.ancho_banda_subida || 0);
+                // Actualizamos los KPIs superiores
+                document.getElementById('kpi-latencia').innerText = `${latencia.toFixed(1)} ms`;
+                document.getElementById('kpi-cpu').innerText = `${cpu.toFixed(0)}%`;
+                document.getElementById('kpi-ram').innerText = `${ram.toFixed(0)}%`;
+                document.getElementById('kpi-banda').innerText = `${download.toFixed(1)} Mbps`;
+                // Aquí inyectamos los números puros a las gráficas
+                // Si tienes gráficas separadas, asegúrate de pasarlos así:
+                pushData(chartLatencia, horaActual, [latencia]);
+                pushData(chartRecursos, horaActual, [cpu, ram]);
+                pushData(chartAnchoBanda, horaActual, [download, upload]);
+            })
+            .catch(error => console.error("Error:", error));
+    }
+    // Helper para meter datos en los datasets de Chart.js de forma uniforme sin romper el diseño
+    function pushData(chartInstance, label, valuesArray) {
+        chartInstance.data.labels.push(label);
+        // Mapeamos cada valor recibido en su respectivo dataset
+        valuesArray.forEach((val, index) => {
+            if (chartInstance.data.datasets[index]) {
+                chartInstance.data.datasets[index].data.push(val);
+            }
+        });
+        // Si excede la ventana del osciloscopio (maxDataPoints), removemos el dato más viejo
+        if (chartInstance.data.labels.length > maxDataPoints) {
+            chartInstance.data.labels.shift();
+            chartInstance.data.datasets.forEach(dataset => dataset.data.shift());
+        }
+        chartInstance.update('none'); // Renderizado optimizado sin animaciones bruscas por segundo
+    }
+    // Al cargar el documento, disparamos las inicializaciones particulares de cada gráfica
+    document.addEventListener("DOMContentLoaded", function() {
+        initChartLatencia();
+        initChartRecursos();
+        initChartAnchoBanda();
+        // Ciclo de refresco continuo cada 2 segundos para simular barrido de osciloscopio
+        actualizarMétricasOsciloscopio();
+        setInterval(actualizarMétricasOsciloscopio, 10000);
+    });
+</script>
+{% endblock %}

@@ -52,6 +52,8 @@ class HistorialMetricas(models.Model):
     velocidad_max_download = models.FloatField(
         null=True, blank=True, help_text="Mbps de Bajada (Speedtest)"
     )
+    # En tu clase HistorialMetricas de models.py agrega:
+    velocidad_max_subida = models.FloatField(null=True, blank=True, help_text="Mbps de Subida")
 
     class Meta:
         ordering = ["-timestamp"]
